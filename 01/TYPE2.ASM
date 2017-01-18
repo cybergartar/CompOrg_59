@@ -19,6 +19,18 @@ printA:	; move cursor to desired position and print 'a'
 				mov 	ah,	2h
 				int		10h
 
+				;	push current cursor position to stack
+				push	dx
+
+				; wait with 10000 microsecs
+				mov		ah, 86h
+				mov		cx, 0000h
+				mov		dx, 2710h
+				int		15h
+
+				;	pop current cursor position from stack
+				pop		dx
+
 				; print 'a'
 				mov		ah, 9h	; set to write character mode
 				mov   cx, 1		; print 1 character
@@ -60,7 +72,7 @@ exit:
 				mov 	ah, 6h
 				mov		al, 0h	; clear whole screen
 				mov		bh, 7h
-				mov		cx, 0h	
+				mov		cx, 0h
 				mov		dx, 184fh
 				int 	10h
 
