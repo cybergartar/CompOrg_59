@@ -1,12 +1,42 @@
           .model  tiny
 
 .data
-          randChar  db   33
+          randChar  db   93
+          poscol    db  80 dup(0)
+          seed      db  ?
 
           .code
           org     0100h
 
 main:
+          mov   ah, 0h
+          int   1ah
+
+          mov   ax, dx
+          xor   dx, dx
+          mov   cx, 90
+          div   cx
+
+          mov   seed, dl
+          mov   si, 79
+
+prepare:
+          mov   dl, seed
+          mov   poscol[si], dl
+          nop
+
+          mov   dl, 6        ; multipiler
+          mov   al, seed
+          mul   dl            ; ax = al * dl
+          add   ax, 7
+          mov   dl, 25        ; divider
+          div   dl            ; remainder = ax % dl
+          mov   seed, ah
+
+          dec   si
+          cmp   si, 0
+          jge   prepare
+
           ;	set display mode to text mode
           mov		ah, 0h
           mov		al,	3h
@@ -23,13 +53,62 @@ printChar:	  ; move cursor to desired position and print 'a'
   				mov 	ah,	2h
   				int		10h
 
-  				; print random character
+          push  dx
+          mov   dh, 0
+          mov   si, dx
+          pop   dx
+
+          mov   bl, poscol[si]
+          sub   bl, dh
+          cmp   bl, 1
+          jc    printWhite
+          jz    printWhite
+
+          cmp   bl, 3
+          jz    printL_Green
+          jc    printL_Green
+
+          cmp   bl, 8
+          jc    printGreen
+          jz    printGreen
+
+          cmp   bl, 10
+          jc    printGray
+          jz    printGray
+
+          jmp   printBlack
+
+
+
+          jmp   printWhite
+printBlack:
+          mov		bl, 00000000b	; set attribute for character
+          jmp   output
+
+printWhite:
+          mov		bl, 00000111b	; set attribute for character
+          jmp   output
+
+printL_Green:
+          mov   bl, 00001010b
+          jmp   output
+
+printGreen:
+          mov   bl, 00000010b
+          jmp   output
+
+printGray:
+          mov   bl, 00001000b
+
+output:
+          ; print random character
   				mov		ah, 9h	; set to write character mode
   				mov   cx, 1		; print 1 character
-  				mov		bl, 00000000b	; set attribute for character
   				mov		al, randChar	; set desired character the one that we randomed
   				int 	10h
+          jmp   nothingToDoHere
 
+nothingToDoHere:
           nop
           call  incRand
 
@@ -43,7 +122,7 @@ newline:
           cmp   dh, 18h
           jge   tolinezero
           inc   dh
-          jmp printA
+          jmp printChar
 
 tolinezero:
           ;	push current cursor position to stack
@@ -51,15 +130,34 @@ tolinezero:
 
           ; wait with 10000 microsecs
           mov		ah, 86h
-          mov		cx, 0001h
-          mov		dx, 41248
+          mov		cx, 0000h
+          mov		dx, 0AFC8h
           int		15h
 
           ;	pop current cursor position from stack
           pop		dx
-
           mov   dh, 0h
-          jmp   printA
+
+          mov   si, 0
+
+incArrayLoop:
+          inc   poscol[si]
+          cmp   poscol[si], 35
+          jl   nothingJa
+          mov   poscol[si], 0
+
+nothingJa:
+          inc   si
+          cmp   si, 80
+          jne   incArrayLoop
+
+            ; inc   poscol
+            ; cmp   poscol, 35
+            ; jl   nothingJa
+            ; mov   poscol, 0
+
+; nothingJa:
+            jmp   printChar
 
 
 
@@ -78,6 +176,7 @@ incRand:  ; (32*seed+4) % 93
 
           pop   dx
           pop   ax
+          ret
 
 
 exit:
