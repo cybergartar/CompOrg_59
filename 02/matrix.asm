@@ -25,11 +25,11 @@ prepare:
           mov   poscol[si], dl
           nop
 
-          mov   dl, 6        ; multipiler
+          mov   dl, 5        ; multipiler
           mov   al, seed
           mul   dl            ; ax = al * dl
           add   ax, 7
-          mov   dl, 25        ; divider
+          mov   dl, 37        ; divider
           div   dl            ; remainder = ax % dl
           mov   seed, ah
 
@@ -142,7 +142,7 @@ tolinezero:
 
 incArrayLoop:
           inc   poscol[si]
-          cmp   poscol[si], 35
+          cmp   poscol[si], 37
           jl   nothingJa
           mov   poscol[si], 0
 
