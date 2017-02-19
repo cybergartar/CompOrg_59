@@ -41,23 +41,23 @@ prepare:                          ; loop through poscol and generate pseudo --
           cmp   si, 0
           jge   prepare
 
-          ;	set display mode to text mode
-          mov		ah, 0h
-          mov		al,	3h
-          int		10h
+          ;  set display mode to text mode
+          mov   ah, 0h
+          mov   al, 3h
+          int   10h
 
           ; set initial value for cursor position
-  				mov 	dh, 0h	;	row variable
-  				mov		dl, 0h	; column variable
-  				mov		bh,	0h
+          mov   dh, 0h  ;  row variable
+          mov   dl, 0h  ; column variable
+          mov   bh, 0h
 
 printChar:  ; move cursor to desired position and print randomed character --
             ; with color releate to cursor position and head of matrix line --
             ; position
 
-  				; move cursor
-  				mov 	ah,	2h
-  				int		10h
+          ; move cursor
+          mov   ah,  2h
+          int    10h
 
           push  dx     ; use dl (column) as index subscript --
           mov   dh, 0  ; to see if current cursor's row should --
@@ -84,59 +84,56 @@ printChar:  ; move cursor to desired position and print randomed character --
 
           jmp   printBlack  ; if not in range, print black char
 
-
-
-          jmp   printWhite
 printBlack:
-          mov		bl, 00000000b	; set attribute black color for character
+          mov   bl, 00000000b  ; set attribute black color for character
           jmp   output
 
 printWhite:
-          mov		bl, 00000111b	; set attribute white color for character
+          mov   bl, 00000111b  ; set attribute white color for character
           jmp   output
 
 printL_Green:
-          mov   bl, 00001010b ; set attribute light green color for character
+          mov   bl, 00001010b  ; set attribute light green color for character
           jmp   output
 
 printGreen:
-          mov   bl, 00000010b ; set attribute green color for character
+          mov   bl, 00000010b  ; set attribute green color for character
           jmp   output
 
 printGray:
-          mov   bl, 00001000b ; set attribute gray color for character
+          mov   bl, 00001000b  ; set attribute gray color for character
 
 output:
           ; print random character
-  				mov		ah, 9h	      ; set to write character mode
-  				mov   cx, 1	       	; print 1 character
-  				mov		al, randChar	; set desired character the one that we randomed
-  				int 	10h
+          mov   ah, 9h        ; set to write character mode
+          mov   cx, 1         ; print 1 character
+          mov   al, randChar  ; set desired character the one that we randomed
+          int   10h
 
           call  randNewChar   ; random new character
 
-          inc		dl	          ; increase cursor column index (move cursor to the right)
-  				cmp		dl, 50h       ; check if cursor is still in screen
-  				jge		newline       ; if cursor is not in screen, go to newline
-  				jmp		printChar     ; else continue printing random character
+          inc    dl           ; increase cursor column index (move cursor to the right)
+          cmp    dl, 50h      ; check if cursor is still in screen
+          jge    newline      ; if cursor is not in screen, go to newline
+          jmp    printChar    ; else continue printing random character
 
 newline:
           mov   dl, 0h        ; move cursor to left edge of screen
           cmp   dh, 18h       ; check if we're on line index 24
           jge   tolinezero    ; if yes (means we exceed screen border) move to first line
           inc   dh            ; else just increase row
-          jmp printChar       ; go back and print random character
+          jmp   printChar     ; go back and print random character
 
 tolinezero:
-          push	dx              ;	push current cursor position to stack
+          push  dx            ;  push current cursor position to stack
 
           ; wait with 45000 microsecs
-          mov		ah, 86h
-          mov		cx, 0000h
-          mov		dx, 0AFC8h
-          int		15h
+          mov   ah, 86h
+          mov   cx, 0000h
+          mov   dx, 0AFC8h
+          int   15h
 
-          pop		dx      ;	pop current cursor position from stack back
+          pop   dx      ;  pop current cursor position from stack back
           mov   dh, 0h  ; set row to row index 0
 
           mov   si, 0   ;initial loop variable
