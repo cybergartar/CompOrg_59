@@ -753,5 +753,6 @@ exitProgram:
           mov   al, 3
           int   10h
 
+          .exit
           ret
           end     main
