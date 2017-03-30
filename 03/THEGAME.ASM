@@ -54,6 +54,7 @@
           bulletLabel    db 'BULLET(S): $', 0
           scoreLabel     db 'SCORE(S): $', 0
           unlimitedLabel db '== UNLIMITED ==$', 0
+          lifeLabel      db 'LIVES: $', 0
 
           menuIndex db 15          ; position of menu indicator '>' in main menu
           mode      db ?           ; 1 = easy, 2 = normal, 3 = veteran
@@ -79,24 +80,130 @@
 
           seed             db 78   ; seed for random char
           playerPos        db 40   ; player position (col)
+          life             db 0
           score            dw 0
           moveEnemyTimer   dw 0    ; counter to move enemy line when count for 1 cycle
           moveBulletsTimer dw 0    ; counter to move bullets line when count for 1 cycle
           sequenceIndex    db 0
 
+          songEnd          dw 0
+          intro            dw 1880 , 500
+                           dw 10  , 200
+                           dw 1880 , 500
+                           dw 10  , 200
+                           dw 1880 , 500
+                           dw 10  , 200
+                           dw 2098 , 375
+                           dw 10  , 150
+                           dw 2246 , 125
+                           dw 10  , 100
+                           dw 1880 , 500
+                           dw 10  , 200
+                           dw 2098 , 375
+                           dw 10  , 150
+                           dw 2246 , 125
+                           dw 10  , 100
+                           dw 1880 , 700
+                           dw 10  , 350
+                           dw 2318 , 500
+                           dw 10  , 200
+                           dw 2318 , 500
+                           dw 10  , 200
+                           dw 2318 , 500
+                           dw 10  , 200
+                           dw 2396 , 375
+                           dw 10  , 150
+                           dw 2046 , 125
+                           dw 10  , 100
+                           dw 2318  , 500
+                           dw 10  , 200
+                           dw 2396 , 375
+                           dw 10  , 150
+                           dw 2046 , 125
+                           dw 10  , 100
+                           dw 2318 , 700
+                           dw 10  , 350
+                           dw 00h  , 00h
+          ending           dw 2637, 20
+                           dw 2637  , 20
+                           dw 10  , 20
+                           dw 2637  , 20
+                           dw 10  , 20
+                           dw 2093  , 20
+                           dw 2637  , 20
+                           dw 10  , 20
+                           dw 3136  , 20
+                           dw 10  , 20
+                           dw 10  , 20
+                           dw 10  , 20
+                           dw 1568  , 20
+                           dw 10  , 20
+                           dw 10  , 20
+                           dw 10  , 20
+                           dw 2093  , 20
+                           dw 10  , 20
+                           dw 10  , 20
+                           dw 1568 , 20
+                           dw 10  , 20
+                           dw 10  , 20
+                           dw 1319 , 20
+                           dw 10  , 20
+                           dw 10  , 20
+                           dw 1760 , 20
+                           dw 10  , 20
+                           dw 1976 , 20
+                           dw 10  , 20
+                           dw 1865 , 20
+                           dw 1760 , 20
+                           dw 10  , 20
+                           dw 1568 , 20
+                           dw 2637 , 20
+                           dw 3136 , 20
+                           dw 3520 , 20
+                           dw 10  , 20
+                           dw 2794 , 20
+                           dw 3136 , 20
+                           dw 10  , 20
+                           dw 2637 , 20
+                           dw 10  , 20
+                           dw 2093 , 20
+                           dw 2349 , 20
+                           dw 1976 , 20
+                           dw 00h, 00h
+
           .code
           org     0100h
 main:
 
-          mov   ah, 00h               ; set screen mode to text mode
+          mov   ah, 00h                 ; set screen mode to text mode
           mov   al, 3
           int   10h
 
-          mov   ah, 09h               ; print main screen
+          mov   ah, 09h                 ; print main screen
           mov   dx, offset titleMsg
           int   21h
 
-          ; move cursor and print menu indicator '>'
+          cmp   songEnd,0
+          jne   soundend
+
+          mov   si, offset intro       ; play opening sound
+          call  speakerOn              ; turn speaker on
+
+LoopIt:
+          lodsw                        ; get freq
+          or    ax, ax                 ; if freq. = 0 then done
+          jz    LDone
+          call  freqOut
+          lodsw                        ; get duration
+          mov   cx, ax
+          call  PauseIt
+          jmp  short LoopIt
+
+LDone:
+          call  speakerOff             ; turn speaker off
+          mov  songEnd,1
+
+soundend:                              ; move cursor and print menu indicator '>'
           mov   ah, 02h
           mov   dh, menuIndex
           mov   dl, 21
@@ -109,7 +216,7 @@ main:
           mov   cx, 1
           int   10h
 
-waitTitle:                        ; wait until up, down arrw or enter pressed
+waitTitle:                ; wait until up, down arrw or enter pressed
           mov   ah, 00h
           int   16h
 
@@ -122,60 +229,84 @@ waitTitle:                        ; wait until up, down arrw or enter pressed
           call  enterPress
           je    enterTitlePress
 
-          jmp   waitTitle         ; if none pressed, wait forever
+          jmp   waitTitle      ; if none pressed, wait forever
 
-downTitlePress:                   ; if down arrw pressed
-          push  cx                ; move '>' down
-          mov   cl, menuIndex     ; must not exceed exit menu
+downTitlePress:                ; if down arrw pressed
+
+          call  speakerOn      ; play down sound effect
+          mov  ax,2000
+          call  freqOut
+          mov  cx,10
+          call  PauseIt
+          call  speakerOff
+
+          push  cx               ; move '>' down
+          mov   cl, menuIndex    ; must not exceed exit menu
           cmp   cl, 17
           jg    returnMain
           inc   cl
           mov   menuIndex, cl
-          jmp   returnMain        ; back to wait for key pressed
+          jmp   returnMain      ; back to wait for key pressed
 
-upTitlePress:                     ; if up arrw pressed
-          push  cx                ; move '>' up
-          mov   cl, menuIndex     ; must not exceed easy menu
+upTitlePress:                   ; if up arrw pressed
+
+          call  speakerOn      ; play up sound effect
+          mov  ax,1500
+          call  freqOut
+          mov  cx,10
+          call  PauseIt
+          call  speakerOff
+
+          push  cx               ; move '>' up
+          mov   cl, menuIndex    ; must not exceed easy menu
           cmp   cl, 16
           jl    returnMain
           dec   cl
           mov   menuIndex, cl
-          jmp   returnMain        ; back to wait for key pressed
+          jmp   returnMain     ; back to wait for key pressed
 
-enterTitlePress:                  ; if enter key pressed
+enterTitlePress:               ; if enter key pressed
+
+          call  speakerOn      ; play enter sound effect
+          mov   ax,1000
+          call  freqOut
+          mov   cx,10
+          call  PauseIt
+          call  speakerOff
+
           push  cx
           mov   cl, menuIndex
-          cmp   cl, 18            ; exit game
+          cmp   cl, 18        ; exit game
           je    exitProgramNode
-          cmp   cl, 15            ; start easy mode
+          cmp   cl, 15        ; start easy mode
           je    easyModePrep
-          cmp   cl, 16            ; start normal mode
+          cmp   cl, 16        ; start normal mode
           je    normalModePrep
-          cmp   cl, 17            ; start veteran mode
+          cmp   cl, 17        ; start veteran mode
           je    hardModePrep
 
 returnMain:
           jmp   main
 
 exitProgramNode:
-          jmp far ptr exitProgram ; exit program
+          jmp far ptr exitProgram  ; exit program
 
 easyModePrep:
-          mov   cl, 1             ; set mode = 1
+          mov   cl, 1        ; set mode = 1
           mov   mode, cl
           jmp   gameplayPrep
 
 normalModePrep:
-          mov   cl, 2             ; set mode = 2
+          mov   cl, 2        ; set mode = 2
           mov   mode, cl
-          mov   cl, 20            ; set initial bullets = 20
+          mov   cl, 20        ; set initial bullets = 20
           mov   bullets, cl
           jmp   gameplayPrep
 
 hardModePrep:
-          mov   cl, 3             ; set mode = 3
+          mov   cl, 3        ; set mode = 3
           mov   mode, cl
-          mov   cl, 5             ; set initial bullets = 5
+          mov   cl, 5        ; set initial bullets = 5
           mov   bullets, cl
           jmp   gameplayPrep
 
@@ -194,6 +325,8 @@ gameplayPrep:
 
           mov   al, 40
           mov   playerPos, al         ; set initial player position to col 40
+          mov   al, 9
+          mov   life, al              ; set initial life to 9
           xor   ax, ax
           mov   score, ax             ; set score, counters to 0
           mov   moveEnemyTimer, ax
@@ -216,8 +349,8 @@ prepare:  ; copy template to initial enemy position
           int   10h
 
           ; set initial value for cursor position
-          mov   dh, 0h  ;  row variable
-          mov   dl, 0h  ; column variable
+          mov   dh, 0h        ;  row variable
+          mov   dl, 0h        ; column variable
           mov   bh, 0h
 
 printChar:
@@ -385,7 +518,7 @@ printUnlimited:
           mov   ah, 09h
           mov   dx, offset unlimitedLabel
           int   21h
-          jmp   printScore
+          jmp   printLives
 
 printBullets:
           push  cx
@@ -397,6 +530,25 @@ printBullets:
           int   10h
 
           pop   cx
+
+printLives:
+          mov   ah, 2
+          mov   bh, 0
+          mov   dh, 24
+          mov   dl, 50
+          int   10h
+
+          mov   ah, 09h
+          mov   dx, offset lifeLabel
+          int   21h
+
+          mov   ah, 02h
+          mov   dh, 48
+          mov   dl, life
+          add   dl, dh
+          int   21h
+
+
 
 printScore:
           ; print score by mod by 10 and push to stack --
@@ -489,6 +641,14 @@ loopMoveBullets:
 
 gotShot:
           ; if bullets hit enemy
+
+          call  speakerOn             ; play hit sound effect
+          mov  ax , 3000
+          call  freqOut
+          mov  cx , 10
+          call  PauseIt
+          call  speakerOff
+
           mov   dl, template[si]
           mov   poscol[si], dl
           mov   dl, bullets
@@ -535,7 +695,7 @@ noBulletMove:
           mov   ah, 01h
           int   16h
 
-          je    increaseEnemyTimer
+          je    increaseEnemyTimerR
 
           mov   ah, 00h
           int   16h
@@ -551,7 +711,14 @@ handleKeyPressInGame:
           call  spacePress
           je    spaceGamePress
 
+          call  escPress
+          je    gameOverWarp
+
           jmp   increaseEnemyTimer
+
+gameOverWarp:
+          ; game over screen is too far, needs warp
+          jmp far ptr gameOverScreen
 
 leftGamePress:
           ; move player to the left and must not exceed left edge
@@ -579,8 +746,19 @@ endRightGamePress:
           pop   dx
           jmp   increaseEnemyTimer
 
+increaseEnemyTimerR:
+          jmp   increaseEnemyTimer
+
 spaceGamePress:
           ; if space(shoot) key pressed
+
+          call  speakerOn
+          mov   ax, 800
+          call  freqOut
+          mov   cx, 10
+          call  PauseIt
+          call  speakerOff
+
           push  dx
           mov   dl, playerPos
           mov   dh, 0
@@ -630,7 +808,40 @@ incArrayLoop:
           mov   moveEnemyTimer, cx
           inc   poscol[di]            ; increase head of column
           cmp   poscol[di], 22        ; see if it exceed border
+          je    decreaseLife          ; if yes decrease player's life
+          jmp   notReachBorder
+
+decreaseLife:
+          mov   cl, life
+          dec   cl
+          cmp   cl, 0
           je    gameOverScreen
+          mov   life, cl
+          push  dx
+          mov   dl, sequenceIndex
+          mov   dh, 0
+          mov   di, dx
+          mov   dl, sequence[di]
+          mov   si, dx
+          mov   dl, template[si]
+          mov   poscol[si], dl
+
+          xor   dx, dx
+          mov   dl, sequenceIndex          ; use new col of enemy
+          inc   dl
+          cmp   dl, 80
+          jne   updateSequenceIndexBorder
+          mov   dl, 0
+          mov   sequenceIndex, dl
+          jmp   endUpdateSequenceIndexBorder
+
+updateSequenceIndexBorder:
+          mov   sequenceIndex, dl
+
+endUpdateSequenceIndexBorder:
+          pop   dx
+
+notReachBorder:
           jl    goPrintChar           ; if not, just continue
 
 
@@ -646,6 +857,22 @@ gameOverScreen:
           mov   ah, 09h               ; print game over screen
           mov   dx, offset overMsg
           int   21h
+
+          mov  si, offset ending     ; play ending sound
+          call  speakerOn             ; get freq
+
+LoopIt2:
+          lodsw
+          or    ax, ax                 ; if freq. = 0 then done
+          jz    LDone2
+          call  freqOut
+          lodsw                       ; get duration
+          mov   cx, ax
+          call  PauseIt
+          jmp  short LoopIt2
+
+LDone2:
+          call  speakerOff             ; turn speaker off
 
           mov   ah, 02h
           mov   dh, 16
@@ -703,6 +930,14 @@ waitOver:
 
 enterOverPress:
           ; if enter pressed, go to main screen
+
+          call  speakerOn
+          mov  ax , 1000
+          call  freqOut
+          mov  cx , 10
+          call  PauseIt
+          call  speakerOff
+
           jmp   main
 
           ; check key pressed
@@ -730,6 +965,10 @@ spacePress:
           cmp   ax, 03920h
           ret
 
+escPress:
+          cmp   ax, 0011bh
+          ret
+
 randNewChar:  ; using pseudo random number generator
               ; random character with equation (32*seed+4) % 93
           push  ax
@@ -748,11 +987,58 @@ randNewChar:  ; using pseudo random number generator
           pop   ax
           ret
 
+speakerOn:
+          in    al, 61h
+          or    al, 03h
+          out   61h, al
+          mov   al, 0B6h
+          out   43h, al
+          ret
+
+speakerOff:
+          in    al, 61h
+          and   al, 0FCh
+          out   61h, al
+          ret
+
+freqOut:
+          mov   dx, 42h                  ; port to out
+          out   dx, al                   ; out low order
+          xchg  ah, al
+          out   dx, al
+          ret
+
+PauseIt proc
+          mov   ax, 0040h
+          mov   es, ax
+
+          ; wait for it to change the first time
+          mov   al, es:[006Ch]
+@a:
+          cmp   al, es:[006Ch]
+          je   short @a
+
+        ; wait for it to change again
+loop_it:
+          mov   al, es:[006Ch]
+
+@b:
+          cmp   al, es:[006Ch]
+          je   short @b
+
+          sub  cx, 110
+          jns  short loop_it
+
+          ret
+
+PauseIt endp
+
 exitProgram:
           mov   ah, 00h
           mov   al, 3
           int   10h
 
           .exit
+
           ret
           end     main
